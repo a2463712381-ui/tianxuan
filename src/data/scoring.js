@@ -1,24 +1,24 @@
 const DIMENSION_MAP = [
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "AS", D: "DR" },
-  { A: "CN", B: "SN", C: "AS", D: "DR" },
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "AS", D: "DR" },
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "AS", D: "DR" },
-  { A: "CN", B: "SN", C: "AS", D: "DR" },
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "AS", D: "DR" },
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "AS", D: "DR" },
-  { A: "CN", B: "SN", C: "AS", D: "DR" },
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "BS", D: "DR" },
-  { A: "CN", B: "SN", C: "AS", D: "DR" }
+  { A: "CN", B: "SN", C: "BS", D: "DR" }, // Q1
+  { A: "CN", B: "SN", C: "BS", D: "DR" }, // Q2
+  { A: "CN", B: "SN", C: "AS", D: "DR" }, // Q3
+  { A: "CN", B: "SN", C: "AS", D: "DR" }, // Q4
+  { A: "CN", B: "SN", C: "BS", D: "DR" }, // Q5
+  { A: "CN", B: "AS", C: "BS", D: "DR" }, // Q6 SN→AS
+  { A: "CN", B: "SN", C: "AS", D: "DR" }, // Q7
+  { A: "CN", B: "SN", C: "BS", D: "DR" }, // Q8
+  { A: "CN", B: "SN", C: "AS", D: "DR" }, // Q9
+  { A: "CN", B: "AS", C: "AS", D: "DR" }, // Q10 SN→AS
+  { A: "CN", B: "SN", C: "AS", D: "DR" }, // Q11 BS→AS
+  { A: "CN", B: "SN", C: "AS", D: "DR" }, // Q12
+  { A: "CN", B: "SN", C: "BS", D: "DR" }, // Q13
+  { A: "CN", B: "BS", C: "BS", D: "DR" }, // Q14 SN→BS
+  { A: "CN", B: "SN", C: "AS", D: "DR" }, // Q15
+  { A: "CN", B: "SN", C: "AS", D: "DR" }, // Q16
+  { A: "CN", B: "SN", C: "AS", D: "DR" }, // Q17 BS→AS
+  { A: "CN", B: "BS", C: "BS", D: "DR" }, // Q18 SN→BS
+  { A: "CN", B: "SN", C: "BS", D: "DR" }, // Q19
+  { A: "CN", B: "SN", C: "AS", D: "DR" }  // Q20
 ];
 
 const RESULT_KEYS = {
