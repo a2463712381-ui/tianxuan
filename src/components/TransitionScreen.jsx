@@ -1,4 +1,4 @@
-function TransitionScreen({ onReveal }) {
+function TransitionScreen() {
   return (
     <section className="screen transition-screen fade-in">
       <div className="card transition-card">
@@ -8,9 +8,6 @@ function TransitionScreen({ onReveal }) {
         <p className="body-copy centered">
           我们会根据你的选择，整理出更适合你的关系节奏、触发点和舒适区。
         </p>
-        <button className="secondary-button" type="button" onClick={onReveal}>
-          查看结果
-        </button>
       </div>
     </section>
   );

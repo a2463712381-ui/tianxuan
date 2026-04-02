@@ -7,9 +7,7 @@ function QuizScreen({
   selectedOption,
   onSelect,
   onPrev,
-  onNext,
   canGoPrev,
-  isLastQuestion
 }) {
   return (
     <section className="screen fade-in">
@@ -18,7 +16,17 @@ function QuizScreen({
           <span className="question-count">
             第 {questionIndex + 1} / {totalQuestions} 题
           </span>
-          <span className="question-hint">根据第一感觉就好</span>
+          {canGoPrev ? (
+            <button
+              className="quiz-back-link"
+              type="button"
+              onClick={onPrev}
+            >
+              ← 上一题
+            </button>
+          ) : (
+            <span className="question-hint">根据第一感觉就好</span>
+          )}
         </div>
 
         <ProgressBar value={(questionIndex + 1) / totalQuestions} />
@@ -42,26 +50,6 @@ function QuizScreen({
             );
           })}
         </div>
-      </div>
-
-      <div className="action-row action-row-inline">
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={onPrev}
-          disabled={!canGoPrev}
-        >
-          上一题
-        </button>
-
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={onNext}
-          disabled={!selectedOption}
-        >
-          {isLastQuestion ? "直接查看结果" : "下一题"}
-        </button>
       </div>
     </section>
   );

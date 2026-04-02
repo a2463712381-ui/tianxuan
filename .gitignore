@@ -8,3 +8,6 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+
+# 生码脚本输出（含明文兑换码）
+scripts/output/

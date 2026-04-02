@@ -11,6 +11,7 @@ import { questions } from "./data/questions";
 import { resultContent } from "./data/results";
 import { determineResult } from "./data/scoring";
 import loadPosterFont from "./utils/loadPosterFont";
+import { syncUnlockStatus } from "./utils/unlock";
 import {
   trackHomeView,
   trackQuizStart,
@@ -19,13 +20,78 @@ import {
   trackResultView,
   trackShareCopy,
   trackRestart,
-  trackInviteCopy
+  trackInviteCopy,
+  trackPosterGenerate,
+  trackCompatPosterGenerate
 } from "./utils/analytics";
 
 const TOTAL_QUESTIONS = questions.length;
 const AUTO_NEXT_DELAY = 220;
+const TRANSITION_DURATION = 2500;
 const SITE_URL = "https://tianxuanzhijiao.qzz.io";
 const SERIES_TAG = "天选 · 知交卷";
+
+// ---- 进度缓存 ----
+const STORAGE_KEY_ANSWERS = "tx_quiz_answers";
+const STORAGE_KEY_QUESTION = "tx_quiz_index";
+const STORAGE_KEY_RESULT = "tx_quiz_result";
+
+function saveProgress(answers, questionIndex) {
+  try {
+    localStorage.setItem(STORAGE_KEY_ANSWERS, JSON.stringify(answers));
+    localStorage.setItem(STORAGE_KEY_QUESTION, String(questionIndex));
+  } catch { /* quota exceeded — 忽略 */ }
+}
+
+function saveResult(resultState) {
+  try {
+    localStorage.setItem(STORAGE_KEY_RESULT, JSON.stringify({
+      resultKey: resultState.resultKey,
+      secondaryKey: resultState.secondaryKey,
+      scores: resultState.scores,
+    }));
+  } catch { /* 忽略 */ }
+}
+
+function clearProgress() {
+  localStorage.removeItem(STORAGE_KEY_ANSWERS);
+  localStorage.removeItem(STORAGE_KEY_QUESTION);
+  localStorage.removeItem(STORAGE_KEY_RESULT);
+}
+
+function loadSavedState() {
+  try {
+    // 优先恢复结果
+    const savedResult = localStorage.getItem(STORAGE_KEY_RESULT);
+    if (savedResult) {
+      const parsed = JSON.parse(savedResult);
+      if (parsed.resultKey && resultContent[parsed.resultKey]) {
+        return {
+          screen: "result",
+          answers: null,
+          questionIndex: 0,
+          resultState: {
+            resultKey: parsed.resultKey,
+            secondaryKey: parsed.secondaryKey || null,
+            scores: parsed.scores,
+            content: resultContent[parsed.resultKey],
+          },
+        };
+      }
+    }
+    // 其次恢复答题进度
+    const savedAnswers = localStorage.getItem(STORAGE_KEY_ANSWERS);
+    const savedIndex = localStorage.getItem(STORAGE_KEY_QUESTION);
+    if (savedAnswers) {
+      const answers = JSON.parse(savedAnswers);
+      if (Array.isArray(answers) && answers.length === TOTAL_QUESTIONS) {
+        const idx = Math.min(Math.max(0, Number(savedIndex) || 0), TOTAL_QUESTIONS - 1);
+        return { screen: "quiz", answers, questionIndex: idx, resultState: null };
+      }
+    }
+  } catch { /* 损坏数据 — 忽略 */ }
+  return null;
+}
 
 function sanitizePosterFilenamePart(text) {
   return (text || "")
@@ -35,6 +101,18 @@ function sanitizePosterFilenamePart(text) {
     .replace(/[<>:"/\\|?*]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+/**
+ * 将 canvas 转为 Blob URL（微信内置浏览器支持长按保存 Blob URL 图片，
+ * 但不支持 data URI 图片的长按保存）。
+ */
+function canvasToBlobUrl(canvas) {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      resolve(URL.createObjectURL(blob));
+    }, "image/png");
+  });
 }
 
 function createPosterPreview({ imageUrl, posterKind, fileName, alt, hint }) {
@@ -73,18 +151,23 @@ function copyText(text) {
 }
 
 function App() {
-  const [screen, setScreen] = useState("home");
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState(Array(TOTAL_QUESTIONS).fill(""));
-  const [resultState, setResultState] = useState(null);
+  const saved = loadSavedState();
+  const [screen, setScreen] = useState(saved?.screen || "home");
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(saved?.questionIndex || 0);
+  const [answers, setAnswers] = useState(saved?.answers || Array(TOTAL_QUESTIONS).fill(""));
+  const [resultState, setResultState] = useState(saved?.resultState || null);
   const [copied, setCopied] = useState(false);
   const [posterPreview, setPosterPreview] = useState(null);
   const [posterLoading, setPosterLoading] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
-  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
+
+  // 二次测试（帮 TA 测）相关状态
+  const [isTestingTA, setIsTestingTA] = useState(false);
+  const [myResultState, setMyResultState] = useState(null);
+  const [taResultType, setTaResultType] = useState(null);
 
   // 读取 URL 中的 ?from= 参数（邀请链接携带的对方类型）
-  const [inviteFrom, setInviteFrom] = useState(() => {
+  const [inviteFrom] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("from") || null;
   });
@@ -96,6 +179,13 @@ function App() {
   const autoNextTimerRef = useRef(null);
   const posterRef = useRef(null);
   const compatPosterRef = useRef(null);
+
+  // 页面初始化：同步服务端解锁状态到 localStorage
+  useEffect(() => {
+    syncUnlockStatus().catch(() => {
+      // 静默失败，降级使用本地缓存
+    });
+  }, []);
 
   // 首页曝光 & 结果页曝光
   useEffect(() => {
@@ -114,7 +204,7 @@ function App() {
 
     const timer = window.setTimeout(() => {
       setScreen("result");
-    }, 1000);
+    }, TRANSITION_DURATION);
 
     return () => window.clearTimeout(timer);
   }, [screen]);
@@ -144,18 +234,6 @@ function App() {
   }, [inviteCopied]);
 
   useEffect(() => {
-    if (!inviteLinkCopied) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => {
-      setInviteLinkCopied(false);
-    }, 1800);
-
-    return () => window.clearTimeout(timer);
-  }, [inviteLinkCopied]);
-
-  useEffect(() => {
     return () => {
       if (autoNextTimerRef.current) {
         window.clearTimeout(autoNextTimerRef.current);
@@ -176,6 +254,7 @@ function App() {
   function startQuiz() {
     clearAutoNextTimer();
     trackQuizStart();
+    clearProgress();
     setScreen("quiz");
     setCurrentQuestionIndex(0);
     setAnswers(Array(TOTAL_QUESTIONS).fill(""));
@@ -188,11 +267,22 @@ function App() {
     clearAutoNextTimer();
     trackQuizComplete();
     const computed = determineResult(nextAnswers);
-    setResultState({
+    const result = {
       ...computed,
       content: resultContent[computed.resultKey]
-    });
-    setScreen("transition");
+    };
+    if (isTestingTA && myResultState) {
+      // 如果是帮 TA 测，结束后回到原结果页
+      setTaResultType(result.resultKey);
+      setResultState(myResultState);
+      setIsTestingTA(false);
+      setMyResultState(null);
+      setScreen("result");
+    } else {
+      setResultState(result);
+      saveResult(result);
+      setScreen("transition");
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -208,17 +298,6 @@ function App() {
     goToQuestion(currentQuestionIndex - 1);
   }
 
-  function goNextManual() {
-    if (!selectedOption) return;
-
-    if (currentQuestionIndex === TOTAL_QUESTIONS - 1) {
-      finalizeResult(answers);
-      return;
-    }
-
-    goToQuestion(currentQuestionIndex + 1);
-  }
-
   function handleSelect(option) {
     clearAutoNextTimer();
     trackQuizAnswer(currentQuestionIndex, option);
@@ -226,6 +305,9 @@ function App() {
     setAnswers((prevAnswers) => {
       const nextAnswers = [...prevAnswers];
       nextAnswers[currentQuestionIndex] = option;
+
+      // 缓存答题进度
+      saveProgress(nextAnswers, currentQuestionIndex);
 
       autoNextTimerRef.current = window.setTimeout(() => {
         if (currentQuestionIndex === TOTAL_QUESTIONS - 1) {
@@ -242,17 +324,20 @@ function App() {
   function restart() {
     clearAutoNextTimer();
     trackRestart();
+    clearProgress();
     setScreen("home");
     setCurrentQuestionIndex(0);
     setAnswers(Array(TOTAL_QUESTIONS).fill(""));
     setResultState(null);
     setCopied(false);
     setInviteCopied(false);
-    setInviteLinkCopied(false);
     setPosterPreview(null);
     setPosterLoading(false);
     setCompatPosterData(null);
     setCompatPosterLoading(false);
+    setIsTestingTA(false);
+    setMyResultState(null);
+    setTaResultType(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -272,7 +357,7 @@ function App() {
 
     try {
       await copyText(shareText);
-      trackShareCopy(resultState.resultKey);
+      trackShareCopy(resultState?.resultKey);
       setCopied(true);
     } catch (error) {
       setCopied(false);
@@ -291,19 +376,6 @@ function App() {
     }
   }
 
-  async function handleCopyInviteLink() {
-    if (!resultState?.resultKey) return;
-    const baseUrl = SITE_URL.split("?")[0];
-    const link = `${baseUrl}?from=${resultState.resultKey}`;
-    try {
-      await copyText(link);
-      setInviteLinkCopied(true);
-    } catch (error) {
-      setInviteLinkCopied(false);
-      window.alert("复制失败，请手动复制链接。");
-    }
-  }
-
   async function handleGeneratePoster() {
     if (!posterRef.current || posterLoading) return;
 
@@ -315,16 +387,24 @@ function App() {
       // 等待一帧让字体渲染生效
       await new Promise((r) => requestAnimationFrame(r));
 
+      // 等待字体完全就绪（包括排版刷新）
+      await document.fonts.ready;
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+
       const canvas = await html2canvas(posterRef.current, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         backgroundColor: null,
         width: 750,
         height: 1000
       });
 
-      const url = canvas.toDataURL("image/png");
+      const url = await canvasToBlobUrl(canvas);
       const resultTitle = sanitizePosterFilenamePart(resultState.content.title);
+
+      trackPosterGenerate(resultState.resultKey);
+
       setPosterPreview(
         createPosterPreview({
           imageUrl: url,
@@ -342,7 +422,7 @@ function App() {
   }
 
   async function handleGenerateCompatPoster(data) {
-    // data: { myTitle, theirTitle, tag, chemistry }
+    // data: { myTitle, theirTitle, tag, chemistry, myTypeKey, theirTypeKey }
     setCompatPosterData(data);
     setCompatPosterLoading(true);
 
@@ -353,24 +433,32 @@ function App() {
       await new Promise((r) => requestAnimationFrame(r));
       await new Promise((r) => requestAnimationFrame(r));
 
+      // 等待字体完全就绪（包括排版刷新）
+      await document.fonts.ready;
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
+
       const canvas = await html2canvas(compatPosterRef.current, {
-        scale: 2,
+        scale: 3,
         useCORS: true,
         backgroundColor: null,
         width: 750,
         height: 1000
       });
 
-      const url = canvas.toDataURL("image/png");
+      const url = await canvasToBlobUrl(canvas);
       const myTitle = sanitizePosterFilenamePart(data.myTitle);
       const theirTitle = sanitizePosterFilenamePart(data.theirTitle);
+
+      trackCompatPosterGenerate(data.myTypeKey, data.theirTypeKey);
+
       setPosterPreview(
         createPosterPreview({
           imageUrl: url,
           posterKind: "compat",
           fileName: `${sanitizePosterFilenamePart(SERIES_TAG)}-${myTitle}-${theirTitle}-相处海报.png`,
           alt: "相处指南海报",
-          hint: "长按图片可保存到手机相册。这是相处指南海报。"
+          hint: "长按图片可保存到手机相册"
         })
       );
     } catch (error) {
@@ -378,6 +466,19 @@ function App() {
     } finally {
       setCompatPosterLoading(false);
     }
+  }
+
+  function handleRerunForTA() {
+    // 1. 保存当前结果
+    setMyResultState(resultState);
+    // 2. 标记状态
+    setIsTestingTA(true);
+    setTaResultType(null);
+    // 3. 重置并跳转
+    setCurrentQuestionIndex(0);
+    setAnswers(Array(TOTAL_QUESTIONS).fill(""));
+    setScreen("quiz");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
@@ -393,14 +494,12 @@ function App() {
             selectedOption={selectedOption}
             onSelect={handleSelect}
             onPrev={goPrevious}
-            onNext={goNextManual}
             canGoPrev={currentQuestionIndex > 0}
-            isLastQuestion={currentQuestionIndex === TOTAL_QUESTIONS - 1}
           />
         )}
 
         {screen === "transition" && (
-          <TransitionScreen onReveal={() => setScreen("result")} />
+          <TransitionScreen />
         )}
 
         {screen === "result" && resultState && (
@@ -415,13 +514,13 @@ function App() {
             seriesTag={SERIES_TAG}
             siteUrl={SITE_URL}
             resultKey={resultState.resultKey}
+            secondaryKey={resultState.secondaryKey}
             onCopyInvite={handleCopyInvite}
             inviteCopied={inviteCopied}
-            inviteFrom={inviteFrom}
-            onCopyInviteLink={handleCopyInviteLink}
-            inviteLinkCopied={inviteLinkCopied}
+            inviteFrom={taResultType || inviteFrom}
             onGenerateCompatPoster={handleGenerateCompatPoster}
             compatPosterLoading={compatPosterLoading}
+            onRerunForTA={handleRerunForTA}
           />
         )}
       </main>
@@ -434,6 +533,9 @@ function App() {
             result={resultState.content}
             scores={resultState.scores}
             seriesTag={SERIES_TAG}
+            resultKey={resultState.resultKey}
+            secondaryKey={resultState.secondaryKey}
+            siteUrl={SITE_URL}
           />
         </div>
       )}
@@ -460,7 +562,10 @@ function App() {
           alt={posterPreview.alt}
           hint={posterPreview.hint}
           posterKind={posterPreview.posterKind}
-          onClose={() => setPosterPreview(null)}
+          onClose={() => {
+            if (posterPreview?.imageUrl) URL.revokeObjectURL(posterPreview.imageUrl);
+            setPosterPreview(null);
+          }}
         />
       )}
     </div>

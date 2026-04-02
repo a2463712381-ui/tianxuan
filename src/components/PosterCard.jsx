@@ -1,8 +1,10 @@
-import { forwardRef } from "react";
+import { forwardRef, useMemo } from "react";
+import qrcode from "qrcode-generator";
+import { DIMENSION_MAX_SCORES } from "../data/scoring";
+import { resultContent } from "../data/results";
 
 const POSTER_W = 750;
 const POSTER_H = 1000;
-const MAX_SCORE = 20; // 每个维度的理论最高分（20题）
 
 const FONT = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
 
@@ -11,8 +13,72 @@ const scoreLabels = {
   SN: "稳定",
   BS: "边界",
   AS: "空间",
-  DR: "共鸣"
+  DR: "共鸣",
+  GT: "信任"
 };
+
+const TYPE_VERSES = {
+  companion: "愿我如星君如月，夜夜流光相皎洁。",
+  steady: "桃李春风一杯酒，江湖夜雨十年灯。",
+  boundary: "相看两不厌，只有敬亭山。",
+  free: "行到水穷处，坐看云起时。",
+  gentle: "细雨湿衣看不见，闲花落地听无声。",
+  resonance: "身无彩凤双飞翼，心有灵犀一点通。"
+};
+
+/* ===== QR 码生成工具 ===== */
+
+/**
+ * 生成 QR 码的 PNG data-URI（Canvas 渲染，html2canvas 截图兼容）。
+ * @param {string} text  - 要编码的 URL
+ * @param {number} size  - 输出图片的像素尺寸（正方形）
+ * @returns {string} data:image/png;base64,...
+ */
+function generateQrDataUri(text, size = 240) {
+  const qr = qrcode(0, "M"); // 0 = auto type-number, M = 15% 容错
+  qr.addData(text);
+  qr.make();
+
+  const moduleCount = qr.getModuleCount();
+  const cellSize = size / moduleCount;
+
+  // 用离屏 canvas 绘制
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+
+  // 透明背景
+  ctx.clearRect(0, 0, size, size);
+
+  // 绘制深色模块（使用海报配色）
+  ctx.fillStyle = "#3f4659";
+  for (let row = 0; row < moduleCount; row++) {
+    for (let col = 0; col < moduleCount; col++) {
+      if (qr.isDark(row, col)) {
+        ctx.fillRect(
+          Math.round(col * cellSize),
+          Math.round(row * cellSize),
+          Math.ceil(cellSize),
+          Math.ceil(cellSize)
+        );
+      }
+    }
+  }
+
+  return canvas.toDataURL("image/png");
+}
+
+/**
+ * 构建二维码链接。
+ * 优先使用传入的 siteUrl；兜底 window.location.origin。
+ */
+function buildQrUrl(siteUrl, resultKey) {
+  const base = siteUrl || (typeof window !== "undefined" ? window.location.origin : "");
+  const params = new URLSearchParams({ from: "poster" });
+  if (resultKey) params.set("result", resultKey);
+  return `${base}?${params.toString()}`;
+}
 
 /* ========== 样式对象 ========== */
 
@@ -95,6 +161,17 @@ const titleStyle = {
   color: "#2d3348"
 };
 
+/* —— 诗句点睛 —— */
+const verseStyle = {
+  marginTop: 10,
+  fontSize: 19,
+  color: "#8a92b0",
+  letterSpacing: "0.1em",
+  textAlign: "center",
+  fontStyle: "italic",
+  fontWeight: 400
+};
+
 /* —— 副标签 —— */
 const subtitleStyle = {
   marginTop: 10,
@@ -105,9 +182,35 @@ const subtitleStyle = {
   fontWeight: 400
 };
 
+/* —— 隐性倾向 —— */
+const secondaryHintStyle = {
+  marginTop: 14,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10
+};
+
+const secondaryLabelTagStyle = {
+  fontSize: 14,
+  color: "#a89cc8",
+  letterSpacing: "0.06em",
+  fontWeight: 500,
+  padding: "4px 12px",
+  background: "rgba(168,156,200,0.12)",
+  borderRadius: 999
+};
+
+const secondaryTypeNameStyle = {
+  fontSize: 18,
+  color: "#8090b0",
+  fontWeight: 600,
+  letterSpacing: "0.04em"
+};
+
 /* —— 海报短句结论 —— */
 const summaryStyle = {
-  marginTop: 22,
+  marginTop: 18,
   fontSize: 21,
   lineHeight: 1.9,
   textAlign: "center",
@@ -220,11 +323,21 @@ const quoteStyle = {
   maxWidth: 600
 };
 
-/* —— 底部落款 —— */
+/* —— 底部落款（左文右码 flex 布局） —— */
 const footerStyle = {
   marginTop: "auto",
-  marginBottom: 44,
-  textAlign: "center"
+  marginBottom: 36,
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 20
+};
+
+/* 落款左侧：文案区 */
+const footerLeftStyle = {
+  flex: 1,
+  minWidth: 0
 };
 
 const footerQuestionStyle = {
@@ -242,14 +355,48 @@ const footerBrandStyle = {
   fontWeight: 600
 };
 
+/* 落款右侧：二维码区 */
+const qrBlockStyle = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  flexShrink: 0,
+  gap: 6
+};
+
+const qrImgStyle = {
+  width: 80,
+  height: 80,
+  borderRadius: 6,
+  background: "rgba(255,255,255,0.75)",
+  padding: 4,
+  boxSizing: "content-box"
+};
+
+const qrCaptionStyle = {
+  fontSize: 11,
+  color: "#9aa3c0",
+  letterSpacing: "0.02em",
+  textAlign: "center",
+  whiteSpace: "nowrap"
+};
+
 /* ========== 组件 ========== */
 
 const PosterCard = forwardRef(function PosterCard(
-  { result, scores, seriesTag },
+  { result, scores, seriesTag, resultKey, secondaryKey, siteUrl },
   ref
 ) {
   // 从 title 中提取【xxx】内的名称
   const shortTitle = result.title.replace(/^.*【/, "").replace(/】.*$/, "");
+
+  // 隐性倾向名称
+  const secondaryTitle = secondaryKey && secondaryKey !== resultKey
+    ? (resultContent[secondaryKey]?.title?.match(/【(.+?)】/)?.[1] || "")
+    : "";
+
+  // 诗句
+  const verse = TYPE_VERSES[resultKey] || "";
 
   // 从 share 字段中提取第一行作为金句
   const quoteText = result.share.split("\n")[0];
@@ -265,10 +412,16 @@ const PosterCard = forwardRef(function PosterCard(
     top: 0,
     left: 0,
     height: "100%",
-    width: `${Math.min((primaryValue / MAX_SCORE) * 100, 100)}%`,
+    width: `${Math.min((primaryValue / (DIMENSION_MAX_SCORES[primaryKey] || 20)) * 100, 100)}%`,
     borderRadius: 8,
     background: "linear-gradient(90deg, #6f84b7 0%, #a89cc8 100%)"
   };
+
+  // 二维码 data URI（useMemo 避免每次 render 重复计算）
+  const qrDataUri = useMemo(() => {
+    const url = buildQrUrl(siteUrl, resultKey);
+    return generateQrDataUri(url, 160);
+  }, [siteUrl, resultKey]);
 
   return (
     <div ref={ref} style={containerStyle}>
@@ -288,9 +441,20 @@ const PosterCard = forwardRef(function PosterCard(
       {/* ③ 结果名称——视觉焦点 */}
       <div style={titleStyle}>{shortTitle}</div>
 
-      {/* ③.5 副标签 */}
+      {/* ③.5 诗句点睛 */}
+      {verse && <div style={verseStyle}>{verse}</div>}
+
+      {/* ③.6 副标签 */}
       {result.subtitle && (
         <div style={subtitleStyle}>{result.subtitle}</div>
+      )}
+
+      {/* ③.7 隐性倾向 */}
+      {secondaryTitle && (
+        <div style={secondaryHintStyle}>
+          <span style={secondaryLabelTagStyle}>内隐倾向</span>
+          <span style={secondaryTypeNameStyle}>{secondaryTitle}</span>
+        </div>
       )}
 
       {/* ④ 海报专用短句 */}
@@ -321,7 +485,7 @@ const PosterCard = forwardRef(function PosterCard(
           {secondaryDims.map(([key, value]) => {
             const secondaryFillStyle = {
               height: "100%",
-              width: `${Math.min((value / MAX_SCORE) * 100, 100)}%`,
+              width: `${Math.min((value / (DIMENSION_MAX_SCORES[key] || 20)) * 100, 100)}%`,
               borderRadius: 3,
               background: "rgba(111,132,183,0.35)"
             };
@@ -344,12 +508,18 @@ const PosterCard = forwardRef(function PosterCard(
       {/* ⑦ 金句 */}
       <div style={quoteStyle}>"{quoteText}"</div>
 
-      {/* ⑧ 底部落款 */}
+      {/* ⑧ 底部落款：左文 + 右码 */}
       <div style={footerStyle}>
-        <div style={footerQuestionStyle}>
-          你在关系里最渴求的，又是什么？
+        <div style={footerLeftStyle}>
+          <div style={footerQuestionStyle}>
+            你在关系里最渴求的，又是什么？
+          </div>
+          <div style={footerBrandStyle}>—— {seriesTag}</div>
         </div>
-        <div style={footerBrandStyle}>—— {seriesTag}</div>
+        <div style={qrBlockStyle}>
+          <img src={qrDataUri} style={qrImgStyle} alt="扫码进入知交卷" />
+          <span style={qrCaptionStyle}>扫码测测你的关系画像</span>
+        </div>
       </div>
     </div>
   );

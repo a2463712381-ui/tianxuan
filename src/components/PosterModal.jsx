@@ -4,13 +4,29 @@ function PosterModal({ imageUrl, fileName, alt, hint, posterKind, onClose }) {
   const modalTitle = posterKind === "compat" ? "相处指南海报预览" : "专属结果海报预览";
   const downloadLabel = posterKind === "compat" ? "保存相处海报" : "保存结果海报";
 
-  function handleDownload() {
-    const link = document.createElement("a");
-    link.href = imageUrl;
-    link.download = fileName || "天选-知交卷-海报.png";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  async function handleDownload() {
+    try {
+      // Blob URL 需要先 fetch 为 blob 才能触发浏览器下载
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = fileName || "天选-知交卷-海报.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      // 释放临时 URL
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+    } catch {
+      // 降级：直接用原 URL
+      const link = document.createElement("a");
+      link.href = imageUrl;
+      link.download = fileName || "天选-知交卷-海报.png";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   }
 
   function handleOverlayClick(e) {

@@ -78,3 +78,28 @@ export function trackCompatibilitySelect(myType, theirType) {
 export function trackInviteCopy(myType, theirType) {
   send("invite_copy", { myType, theirType });
 }
+
+/** 生成个人海报 */
+export function trackPosterGenerate(resultKey) {
+  send("poster_generate", { type: resultKey });
+}
+
+/** 生成相处海报 */
+export function trackCompatPosterGenerate(myType, theirType) {
+  send("compat_poster_generate", { myType, theirType });
+}
+
+/** 解锁个人版成功 */
+export function trackUnlockSingle(resultType) {
+  send("unlock_single", { type: resultType });
+}
+
+/** 解锁双人版成功 */
+export function trackUnlockDouble(myType, theirType) {
+  send("unlock_double", { myType, theirType });
+}
+
+/** 解锁失败（码无效） */
+export function trackUnlockFail(tier) {
+  send("unlock_fail", { tier });
+}

@@ -7,6 +7,15 @@ const TYPE_NAMES = {
   resonance: "高山流水",
 };
 
+const ARCHETYPES = [
+  { name: "朝暮相依", desc: "需要被回应的确定感" },
+  { name: "有常相守", desc: "要的是稳定而不是热烈" },
+  { name: "知止有度", desc: "在亲密里也需要呼吸感" },
+  { name: "闲云野鹤", desc: "享受关系但拒绝被定义" },
+  { name: "静水流深", desc: "信任需要时间来兑现" },
+  { name: "高山流水", desc: "等的不是陪伴而是共鸣" }
+];
+
 const introMoments = [
   "明明心中有牵挂，却不愿日日传书",
   "旁人靠得太近，便会本能地想退后半步",
@@ -24,6 +33,9 @@ const notes = [
 function HomeScreen({ onStart, seriesTag, inviteFrom }) {
   const fromName = inviteFrom && TYPE_NAMES[inviteFrom];
 
+  // 为了实现无缝滚动，我们将数组复制一份
+  const scrollList = [...ARCHETYPES, ...ARCHETYPES];
+
   return (
     <section className="screen screen-home fade-in">
       <div className="hero-glow hero-glow-left" />
@@ -31,7 +43,7 @@ function HomeScreen({ onStart, seriesTag, inviteFrom }) {
 
       {fromName && (
         <div className="invite-banner">
-          有人正等你揭晓你们的相处默契 ✨
+          一位「{fromName}」正等你揭晓你们的相处默契 ✨
         </div>
       )}
 
@@ -43,6 +55,10 @@ function HomeScreen({ onStart, seriesTag, inviteFrom }) {
       <p className="page-subtitle">
         不是你难以相处，只是你心中自有亲疏深浅。
       </p>
+
+      <button className="primary-button home-cta-top" type="button" onClick={onStart}>
+        开启测验
+      </button>
 
       <div className="card intro-card">
         <p className="lead-text">你是否也有过这些心绪：</p>
@@ -59,6 +75,25 @@ function HomeScreen({ onStart, seriesTag, inviteFrom }) {
         </p>
       </div>
 
+      <div className="card preview-card">
+        <h2 className="section-title">你会是哪一种？</h2>
+        
+        <div className="preview-scroll-viewport">
+          <div className="preview-scroll-track">
+            {scrollList.map((item, index) => (
+              <div className="preview-item-row" key={index}>
+                <span className="preview-name-row">{item.name}</span>
+                <span className="preview-desc-row">{item.desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="preview-footer-hint">
+          及更多未定义的隐性特质……
+        </p>
+      </div>
+
       <div className="card notes-card">
         <h2 className="section-title">测验说明</h2>
         <ul className="info-grid">
@@ -67,41 +102,8 @@ function HomeScreen({ onStart, seriesTag, inviteFrom }) {
           ))}
         </ul>
       </div>
-
-      <div className="card preview-card">
-        <h2 className="section-title">你会是哪一种？</h2>
-        <div className="preview-grid">
-          <div className="preview-item">
-            <span className="preview-name">朝暮相依</span>
-            <span className="preview-desc">需要被回应的确定感</span>
-          </div>
-          <div className="preview-item">
-            <span className="preview-name">有常相守</span>
-            <span className="preview-desc">要的是稳定而不是热烈</span>
-          </div>
-          <div className="preview-item">
-            <span className="preview-name">知止有度</span>
-            <span className="preview-desc">在亲密里也需要呼吸感</span>
-          </div>
-          <div className="preview-item">
-            <span className="preview-name">闲云野鹤</span>
-            <span className="preview-desc">享受关系但拒绝被定义</span>
-          </div>
-          <div className="preview-item">
-            <span className="preview-name">静水流深</span>
-            <span className="preview-desc">信任需要时间来兑现</span>
-          </div>
-          <div className="preview-item">
-            <span className="preview-name">高山流水</span>
-            <span className="preview-desc">等的不是陪伴而是共鸣</span>
-          </div>
-        </div>
-      </div>
-
-      <button className="primary-button" type="button" onClick={onStart}>
-        开启测验
-      </button>
     </section>
   );
 }
+
 export default HomeScreen;
