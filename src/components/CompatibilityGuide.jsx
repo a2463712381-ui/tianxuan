@@ -159,9 +159,22 @@ function CompatibilityGuide({
         <div className="compat-preview-callout">
           <span className="compat-preview-kicker">你将在这里看到</span>
           <div className="compat-preview-grid">
-            <div className="compat-preview-pill">更容易默契的地方</div>
-            <div className="compat-preview-pill">最可能卡住的摩擦</div>
-            <div className="compat-preview-pill">适合你们的相处建议</div>
+            <div className="compat-preview-row">
+              <span className="compat-preview-pill">关系画像</span>
+              <span className="compat-preview-sep">/</span>
+              <span className="compat-preview-pill">天然默契</span>
+              <span className="compat-preview-sep">/</span>
+              <span className="compat-preview-pill">潜在摩擦</span>
+              <span className="compat-preview-sep">/</span>
+              <span className="compat-preview-pill">双方建议</span>
+            </div>
+            <div className="compat-preview-row">
+              <span className="compat-preview-pill">相处锦囊</span>
+              <span className="compat-preview-sep">/</span>
+              <span className="compat-preview-pill">关系预警信号</span>
+              <span className="compat-preview-sep">/</span>
+              <span className="compat-preview-pill">推荐一起做的事</span>
+            </div>
           </div>
         </div>
 

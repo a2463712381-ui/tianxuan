@@ -244,7 +244,7 @@ function ResultScreen({
   }
 
   return (
-    <section className="screen fade-in">
+    <section className="screen screen-result fade-in">
       <div className="result-story-card">
         <section className="result-stage result-stage-identity">
           {/* ========== Hero 区 ========== */}
@@ -259,16 +259,16 @@ function ResultScreen({
             )}
             {result.subtitle && <p className="result-hero-subtitle">{result.subtitle}</p>}
             <p className="result-hero-summary">{result.summary}</p>
-          </div>
 
-          {/* ========== 次倾向提示 ========== */}
-          {secondaryPresentation && (
-            <div className={`result-secondary-hint result-secondary-hint-${secondaryPresentation.tone}`}>
-              <span className="result-secondary-label">{secondaryPresentation.label}</span>
-              <p className="result-secondary-headline">{secondaryPresentation.headline}</p>
-              <p className="result-secondary-desc">{secondaryPresentation.description}</p>
-            </div>
-          )}
+            {/* ========== 次倾向提示 ========== */}
+            {secondaryPresentation && (
+              <div className={`result-secondary-hint result-secondary-hint-${secondaryPresentation.tone}`}>
+                <span className="result-secondary-label">{secondaryPresentation.label}</span>
+                <p className="result-secondary-headline">{secondaryPresentation.headline}</p>
+                <p className="result-secondary-desc">{secondaryPresentation.description}</p>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* ========== Tab 切换栏 ========== */}
@@ -294,7 +294,6 @@ function ResultScreen({
                   kicker="第二章 · 心迹分布"
                   title="你最在意的关系感受，落点在哪一处"
                   body="先看见自己的节奏，再去理解你为什么会被某些靠近打动，也会被某些相处方式消磨。"
-                  align="center"
                 />
 
                 {/* 雷达图 — 轻量展示，无外框 */}
@@ -370,12 +369,19 @@ function ResultScreen({
                     <p className="paywall-desc">
                       解锁你的完整关系图景 —— 从深层动机、情谊优势，到容易让你消耗的瞬间和最契合你的相处方式，帮你真正看清自己在关系中的模样。
                     </p>
-                    <div className="paywall-preview-list">
-                      <span className="paywall-preview-tag">心镜独白</span>
-                      <span className="paywall-preview-tag">情谊优势</span>
-                      <span className="paywall-preview-tag">关系触发点</span>
-                      <span className="paywall-preview-tag">相处之道</span>
-                      <span className="paywall-preview-tag">锦囊</span>
+                    <div className="paywall-preview-list" aria-label="完整报告包含以下内容">
+                      <div className="paywall-preview-row">
+                        <span className="paywall-preview-tag">心镜独白</span>
+                        <span className="paywall-preview-sep">/</span>
+                        <span className="paywall-preview-tag">情谊优势</span>
+                        <span className="paywall-preview-sep">/</span>
+                        <span className="paywall-preview-tag">关系触发点</span>
+                      </div>
+                      <div className="paywall-preview-row">
+                        <span className="paywall-preview-tag">相处之道</span>
+                        <span className="paywall-preview-sep">/</span>
+                        <span className="paywall-preview-tag">锦囊</span>
+                      </div>
                     </div>
                     <form className="paywall-form" onSubmit={handleCodeSubmit}>
                       <input
