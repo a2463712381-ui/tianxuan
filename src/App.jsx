@@ -506,6 +506,7 @@ function App() {
           <ResultScreen
             result={resultState.content}
             scores={resultState.scores}
+            confidence={resultState.confidence}
             copied={copied}
             onRestart={restart}
             onCopyShare={handleCopyShare}

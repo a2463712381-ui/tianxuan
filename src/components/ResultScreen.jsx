@@ -105,6 +105,15 @@ const SECONDARY_SUBTITLES = {
   resonance: "你等的不是陪伴而是共鸣"
 };
 
+const SECONDARY_EXPLANATIONS = {
+  companion: "在更深的关系里，你也会格外在意对方是否有回应，是否愿意把心意真实地放回来。",
+  steady: "除了当下的相处感受，你也会在意一段关系能否安稳长久，能否让人一直放得下心。",
+  boundary: "当关系逐渐靠近时，你也会很在意边界是否被看见，彼此能不能在亲密里保有分寸。",
+  free: "即使你愿意靠近，你也仍会在意关系里有没有空间感，自己能不能自在地做自己。",
+  gentle: "面对真正重要的关系时，你也会希望信任按自己的节奏慢慢形成，而不是被太快推进。",
+  resonance: "在更深的关系里，你也会格外看重彼此是否真正懂你，能否接住那些不便明说的心绪。"
+};
+
 const TYPE_VERSES = {
   companion: "愿我如星君如月，夜夜流光相皎洁。",
   steady: "桃李春风一杯酒，江湖夜雨十年灯。",
@@ -122,6 +131,31 @@ function extractShortTitle(title) {
 function renderLines(text) {
   return text.split("\n").filter((line) => line.trim())
     .map((line, index) => <p key={`${line}-${index}`} className="body-copy">{line}</p>);
+}
+
+function getSecondaryPresentation(confidence, resultKey, secondaryKey) {
+  if (!secondaryKey || secondaryKey === resultKey) return null;
+
+  const secondaryTitle = extractShortTitle(resultContent[secondaryKey]?.title || "");
+  const explanation = SECONDARY_EXPLANATIONS[secondaryKey];
+
+  if (confidence === "high") return null;
+
+  if (confidence === "moderate") {
+    return {
+      tone: "soft",
+      label: "另一层偏向",
+      headline: `你心里也有一点「${secondaryTitle}」的影子`,
+      description: `这意味着：${explanation}`
+    };
+  }
+
+  return {
+    tone: "full",
+    label: "次倾向",
+    headline: `你心里也藏着一点「${secondaryTitle}」`,
+    description: `这意味着：${explanation}`
+  };
 }
 
 function ResultListSection({ title, items, tone = "default", kicker }) {
@@ -154,7 +188,7 @@ const TAB_PAIR = "pair";
 
 function ResultScreen({
   result, scores, onRestart, onCopyShare, onGeneratePoster, posterLoading,
-  copied, seriesTag, siteUrl, resultKey, secondaryKey,
+  copied, seriesTag, siteUrl, resultKey, secondaryKey, confidence,
   onCopyInvite, inviteCopied, inviteFrom,
   onGenerateCompatPoster, compatPosterLoading, onRerunForTA
 }) {
@@ -168,6 +202,7 @@ function ResultScreen({
 
   const shortTitle = extractShortTitle(result.title);
   const maxScore = Math.max(...Object.values(scores));
+  const secondaryPresentation = getSecondaryPresentation(confidence, resultKey, secondaryKey);
 
   function handleTabChange(tab) {
     setActiveTab(tab);
@@ -227,15 +262,11 @@ function ResultScreen({
           </div>
 
           {/* ========== 次倾向提示 ========== */}
-          {secondaryKey && secondaryKey !== resultKey && (
-            <div className="result-secondary-hint">
-              <span className="result-secondary-label">隐性倾向</span>
-              <span className="result-secondary-type">
-                {extractShortTitle(resultContent[secondaryKey]?.title || "")}
-              </span>
-              {SECONDARY_SUBTITLES[secondaryKey] && (
-                <span className="result-secondary-desc">{SECONDARY_SUBTITLES[secondaryKey]}</span>
-              )}
+          {secondaryPresentation && (
+            <div className={`result-secondary-hint result-secondary-hint-${secondaryPresentation.tone}`}>
+              <span className="result-secondary-label">{secondaryPresentation.label}</span>
+              <p className="result-secondary-headline">{secondaryPresentation.headline}</p>
+              <p className="result-secondary-desc">{secondaryPresentation.description}</p>
             </div>
           )}
         </section>

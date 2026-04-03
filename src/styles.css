@@ -684,34 +684,56 @@ button { font: inherit; }
    ============================================================ */
 
 .result-secondary-hint {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 18px 20px;
-  margin: 0;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(247, 248, 252, 0.42));
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px 20px;
+  margin: 2px 0 0;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(246, 247, 251, 0.76)),
+    radial-gradient(circle at top left, rgba(164, 129, 198, 0.08), transparent 48%);
   border: 1px solid rgba(111, 132, 183, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.result-secondary-hint::before {
+  content: "";
+  width: 48px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(111, 132, 183, 0.4), rgba(111, 132, 183, 0));
+}
+
+.result-secondary-hint-soft {
+  gap: 8px;
+  padding-top: 16px;
+  padding-bottom: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(247, 248, 252, 0.64)),
+    radial-gradient(circle at top left, rgba(164, 129, 198, 0.05), transparent 50%);
 }
 
 .result-secondary-label {
   font-size: var(--text-xs);
   color: var(--text-faint);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
-.result-secondary-type {
-  font-size: var(--text-md);
-  font-weight: 600;
+.result-secondary-headline {
+  margin: 0;
   color: var(--text-heading);
-  letter-spacing: 0.04em;
+  font-size: clamp(1rem, 2.8vw, 1.1rem);
+  line-height: 1.72;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .result-secondary-desc {
+  margin: 0;
   font-size: var(--text-sm);
   color: var(--text-muted);
   font-weight: 400;
+  line-height: 1.9;
 }
 
 /* ============================================================
@@ -862,6 +884,7 @@ button { font: inherit; }
 }
 
 .result-list li {
+  position: relative;
   padding: 14px 14px 14px 20px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.58);
@@ -870,6 +893,7 @@ button { font: inherit; }
 
 .result-list li::before {
   left: 10px;
+  top: 1.05em;
 }
 
 .result-emphasis-copy {
