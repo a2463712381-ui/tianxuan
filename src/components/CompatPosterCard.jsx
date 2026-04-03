@@ -1,8 +1,49 @@
-import { forwardRef } from "react";
+import { forwardRef, useMemo } from "react";
+import qrcode from "qrcode-generator";
 
 const POSTER_W = 750;
 const POSTER_H = 1000;
 const FONT = '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
+
+function generateQrDataUri(text, size = 240) {
+  const qr = qrcode(0, "M");
+  qr.addData(text);
+  qr.make();
+
+  const moduleCount = qr.getModuleCount();
+  const cellSize = size / moduleCount;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+
+  ctx.clearRect(0, 0, size, size);
+  ctx.fillStyle = "#3f4659";
+
+  for (let row = 0; row < moduleCount; row++) {
+    for (let col = 0; col < moduleCount; col++) {
+      if (qr.isDark(row, col)) {
+        ctx.fillRect(
+          Math.round(col * cellSize),
+          Math.round(row * cellSize),
+          Math.ceil(cellSize),
+          Math.ceil(cellSize)
+        );
+      }
+    }
+  }
+
+  return canvas.toDataURL("image/png");
+}
+
+function buildCompatQrUrl(siteUrl, myTypeKey) {
+  const base = siteUrl || (typeof window !== "undefined" ? window.location.origin : "");
+  const params = new URLSearchParams();
+  if (myTypeKey) {
+    params.set("from", myTypeKey);
+  }
+  return params.toString() ? `${base}?${params.toString()}` : base;
+}
 
 /* ========== 样式对象 ========== */
 
@@ -142,7 +183,17 @@ const hintItemStyle = {
 
 const footerStyle = {
   marginTop: "auto",
-  marginBottom: 44,
+  marginBottom: 36,
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 20
+};
+
+const footerLeftStyle = {
+  flex: 1,
+  minWidth: 0,
   textAlign: "center"
 };
 
@@ -161,14 +212,43 @@ const footerBrandStyle = {
   fontWeight: 600
 };
 
+const qrBlockStyle = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  flexShrink: 0,
+  gap: 6
+};
+
+const qrImgStyle = {
+  width: 80,
+  height: 80,
+  borderRadius: 6,
+  background: "rgba(255,255,255,0.75)",
+  padding: 4,
+  boxSizing: "content-box"
+};
+
+const qrCaptionStyle = {
+  fontSize: 11,
+  color: "#9aa3c0",
+  letterSpacing: "0.02em",
+  textAlign: "center",
+  whiteSpace: "nowrap"
+};
+
 /* ========== 组件 ========== */
 
 const CompatPosterCard = forwardRef(function CompatPosterCard(
-  { myTitle, theirTitle, tag, chemistry, seriesTag },
+  { myTitle, theirTitle, tag, chemistry, seriesTag, siteUrl, myTypeKey },
   ref
 ) {
   // 从 tag 中分离 emoji 和标签文字（如 "🔥 共振型配对"）
   const tagText = tag || "";
+  const qrDataUri = useMemo(() => {
+    const url = buildCompatQrUrl(siteUrl, myTypeKey);
+    return generateQrDataUri(url, 160);
+  }, [siteUrl, myTypeKey]);
 
   return (
     <div ref={ref} style={containerStyle}>
@@ -210,10 +290,16 @@ const CompatPosterCard = forwardRef(function CompatPosterCard(
 
       {/* ⑧ 底部落款 */}
       <div style={footerStyle}>
-        <div style={footerQuestionStyle}>
-          测一测你们的相处默契
+        <div style={footerLeftStyle}>
+          <div style={footerQuestionStyle}>
+            测一测你们的相处默契
+          </div>
+          <div style={footerBrandStyle}>—— {seriesTag}</div>
         </div>
-        <div style={footerBrandStyle}>—— {seriesTag}</div>
+        <div style={qrBlockStyle}>
+          <img src={qrDataUri} style={qrImgStyle} alt="扫码进入相处指南" />
+          <span style={qrCaptionStyle}>扫码测测你们的相处默契</span>
+        </div>
       </div>
     </div>
   );

@@ -549,6 +549,8 @@ function App() {
             theirTitle={compatPosterData.theirTitle}
             tag={compatPosterData.tag}
             chemistry={compatPosterData.chemistry}
+            myTypeKey={compatPosterData.myTypeKey}
+            siteUrl={SITE_URL}
             seriesTag={SERIES_TAG}
           />
         </div>

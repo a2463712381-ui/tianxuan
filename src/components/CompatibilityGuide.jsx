@@ -156,6 +156,15 @@ function CompatibilityGuide({
           </p>
         </div>
 
+        <div className="compat-preview-callout">
+          <span className="compat-preview-kicker">你将在这里看到</span>
+          <div className="compat-preview-grid">
+            <div className="compat-preview-pill">更容易默契的地方</div>
+            <div className="compat-preview-pill">最可能卡住的摩擦</div>
+            <div className="compat-preview-pill">适合你们的相处建议</div>
+          </div>
+        </div>
+
         <div className="compat-grid">
           {typeOptions.map((opt) => (
             <button
@@ -374,8 +383,9 @@ function CompatibilityGuide({
 
       {/* ===== 行动区 ===== */}
       <div className="compat-action-zone">
-        <p className="body-copy centered">
-          让 TA 也来测一测，揭晓更精准的「相处版」？
+        <span className="compat-action-kicker">如果想看得更准一些</span>
+        <p className="body-copy centered compat-action-title">
+          让 TA 也来测一测，你们的相处版会更贴近真实
         </p>
         <button
           className="primary-button"
