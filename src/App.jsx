@@ -48,6 +48,7 @@ function saveResult(resultState) {
     localStorage.setItem(STORAGE_KEY_RESULT, JSON.stringify({
       resultKey: resultState.resultKey,
       secondaryKey: resultState.secondaryKey,
+      confidence: resultState.confidence,
       scores: resultState.scores,
     }));
   } catch { /* 忽略 */ }
@@ -73,6 +74,7 @@ function loadSavedState() {
           resultState: {
             resultKey: parsed.resultKey,
             secondaryKey: parsed.secondaryKey || null,
+            confidence: parsed.confidence || null,
             scores: parsed.scores,
             content: resultContent[parsed.resultKey],
           },

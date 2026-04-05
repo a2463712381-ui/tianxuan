@@ -61,14 +61,14 @@ function HomeScreen({ onStart, seriesTag, inviteFrom }) {
       </button>
 
       <div className="card intro-card">
-        <p className="lead-text">你是否也有过这些心绪：</p>
+        <p className="lead-text">这些心绪，你是否也曾有过一二？</p>
         <ul className="soft-list">
           {introMoments.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
         <p className="body-copy">
-          人世间许多情谊的消耗，并非因为不在意，而是因为彼此需要的留白与距离不同。
+          许多情谊的消耗，并非因为不在意，而是因为彼此需要的距离不同。
         </p>
         <p className="body-copy emphasis">
           完成这份测验，寻出最契合你的羁绊之道。

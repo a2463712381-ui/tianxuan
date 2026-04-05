@@ -10,15 +10,80 @@ import {
 import { isDoubleUnlocked, validateForTier, normalizeCode } from "../utils/unlock";
 
 /* ========== 渲染工具 ========== */
+const TYPE_TITLES = typeOptions.map((item) => item.title);
+const TYPE_TITLE_PATTERN = new RegExp(`(${TYPE_TITLES.join("|")})`, "g");
+
+function renderHighlightedText(text) {
+  if (!text) return text;
+
+  return text.split(TYPE_TITLE_PATTERN).map((part, index) => {
+    if (TYPE_TITLES.includes(part)) {
+      return (
+        <span key={`${part}-${index}`} className="compat-type-emphasis">
+          {part}
+        </span>
+      );
+    }
+    return <span key={`text-${index}`}>{part}</span>;
+  });
+}
+
 function renderParagraphs(text) {
   return text
     .split("\n")
     .filter((line) => line.trim())
     .map((line, i) => (
-      <p key={i} className="body-copy">
-        {line}
+      <p key={i} className="body-copy compat-prose-paragraph">
+        {renderHighlightedText(line)}
       </p>
     ));
+}
+
+function getPoeticPreviewExcerpt(text) {
+  if (!text) return "";
+  const firstSentenceEnd = text.search(/[。！？]/);
+  if (firstSentenceEnd >= 0) {
+    const sentence = text.slice(0, firstSentenceEnd + 1);
+    return firstSentenceEnd < text.length - 1 ? `${sentence}……` : sentence;
+  }
+  if (text.length <= 28) return text;
+  return `${text.slice(0, 28)}……`;
+}
+
+function splitAdviceLead(text) {
+  const matchedTitle = typeOptions.find((item) => text.startsWith(item.title));
+  if (!matchedTitle) {
+    return { key: null, lead: null, body: text };
+  }
+
+  return {
+    key: matchedTitle.key,
+    lead: matchedTitle.title,
+    body: text.slice(matchedTitle.title.length).trim()
+  };
+}
+
+function buildAdviceEntries(adviceItems, primaryTypeKey, secondaryTypeKey) {
+  const order = new Map([
+    [primaryTypeKey, 0],
+    [secondaryTypeKey, 1]
+  ]);
+
+  return adviceItems
+    .map((item, index) => ({
+      ...splitAdviceLead(item),
+      isSelf: false,
+      originalIndex: index
+    }))
+    .map((item) => ({
+      ...item,
+      isSelf: item.key === primaryTypeKey
+    }))
+    .sort((a, b) => {
+      const rankA = a.key && order.has(a.key) ? order.get(a.key) : 99 + a.originalIndex;
+      const rankB = b.key && order.has(b.key) ? order.get(b.key) : 99 + b.originalIndex;
+      return rankA - rankB;
+    });
 }
 
 /* ========== 主组件 ========== */
@@ -44,6 +109,7 @@ function CompatibilityGuide({
 
   const guide = selectedType ? getCompatibility(myTypeKey, selectedType.key) : null;
   const premiumGuide = selectedType ? getPremiumCompatibility(myTypeKey, selectedType.key) : null;
+  const adviceEntries = guide ? buildAdviceEntries(guide.advice, myTypeKey, selectedType.key) : [];
 
   // 如果有 ?from= 参数，自动选中对方类型
   useEffect(() => {
@@ -236,8 +302,19 @@ function CompatibilityGuide({
         <div className="compat-free-item">
           <span className="compat-label">相处建议</span>
           <ul className="compat-advice-list">
-            {guide.advice.map((item, i) => (
-              <li key={i} className="body-copy">{item}</li>
+            {adviceEntries.map((item, i) => (
+              <li key={i} className="body-copy">
+                {item.lead ? (
+                  <>
+                    <span className="compat-advice-lead">
+                      给{item.lead}的{item.isSelf ? "你" : "TA"}：
+                    </span>
+                    {item.body}
+                  </>
+                ) : (
+                  item.body
+                )}
+              </li>
             ))}
           </ul>
         </div>
@@ -253,16 +330,18 @@ function CompatibilityGuide({
       {/* ===== 深度区 ===== */}
       {premiumGuide && (
         <div className="compat-deep-zone" ref={paywallRef}>
-          {/* 预览 */}
-          <div className="compat-deep-preview">
-            <span className="compat-label">深度解读 · 预览</span>
-            <p className="body-copy compat-chemistry">{premiumGuide.preview.chemistry}</p>
-            <span className="compat-tag">{premiumGuide.preview.tag}</span>
-          </div>
-
           {/* 已解锁 */}
           {unlocked ? (
-            <div className="compat-premium-group fade-in">
+            <>
+              <div className="compat-deep-preview">
+                <span className="compat-label">深度解读 · 预览</span>
+                <span className="compat-tag">{premiumGuide.preview.tag}</span>
+                {premiumGuide.preview.poem && (
+                  <p className="compat-poem">{premiumGuide.preview.poem}</p>
+                )}
+              </div>
+
+              <div className="compat-premium-group fade-in">
               <div className="unlock-status unlock-status-double">
                 <span className="unlock-status-dot" />
                 已解锁 · 双人深度版
@@ -283,7 +362,7 @@ function CompatibilityGuide({
                   {premiumGuide.premium.synergy.map((item, i) => (
                     <div key={i} className="compat-pair-item">
                       <strong className="compat-pair-title">{item.title}</strong>
-                      <p className="body-copy">{item.desc}</p>
+                      <p className="body-copy">{renderHighlightedText(item.desc)}</p>
                     </div>
                   ))}
                 </div>
@@ -296,7 +375,7 @@ function CompatibilityGuide({
                   {premiumGuide.premium.friction.map((item, i) => (
                     <div key={i} className="compat-pair-item compat-pair-item-friction">
                       <strong className="compat-pair-title">{item.title}</strong>
-                      <p className="body-copy">{item.desc}</p>
+                      <p className="body-copy">{renderHighlightedText(item.desc)}</p>
                     </div>
                   ))}
                 </div>
@@ -306,18 +385,18 @@ function CompatibilityGuide({
               <div className="compat-deep-section compat-deep-advice-pair">
                 <div className="compat-advice-card">
                   <span className="compat-label">给 {premiumGuide.premium.adviceA.label} 的话</span>
-                  <p className="body-copy">{premiumGuide.premium.adviceA.text}</p>
+                  <p className="body-copy">{renderHighlightedText(premiumGuide.premium.adviceA.text)}</p>
                 </div>
                 <div className="compat-advice-card">
                   <span className="compat-label">给 {premiumGuide.premium.adviceB.label} 的话</span>
-                  <p className="body-copy">{premiumGuide.premium.adviceB.text}</p>
+                  <p className="body-copy">{renderHighlightedText(premiumGuide.premium.adviceB.text)}</p>
                 </div>
               </div>
 
               {/* 相处锦囊 */}
               <div className="compat-deep-section compat-deep-nugget">
                 <span className="compat-label">相处锦囊</span>
-                <p className="body-copy compat-nugget">{premiumGuide.premium.nugget}</p>
+                <p className="body-copy compat-nugget">{renderHighlightedText(premiumGuide.premium.nugget)}</p>
               </div>
 
               {/* 关系预警信号 */}
@@ -325,7 +404,7 @@ function CompatibilityGuide({
                 <span className="compat-label">关系预警信号</span>
                 <ul className="compat-advice-list">
                   {premiumGuide.premium.warnings.map((item, i) => (
-                    <li key={i} className="body-copy">{item}</li>
+                    <li key={i} className="body-copy">{renderHighlightedText(item)}</li>
                   ))}
                 </ul>
               </div>
@@ -337,20 +416,32 @@ function CompatibilityGuide({
                   {premiumGuide.premium.activities.map((item, i) => (
                     <div key={i} className="compat-pair-item compat-pair-item-activity">
                       <strong className="compat-pair-title">{item.title}</strong>
-                      <p className="body-copy">{item.desc}</p>
+                      <p className="body-copy">{renderHighlightedText(item.desc)}</p>
                     </div>
                   ))}
                 </div>
               </div>
-            </div>
+              </div>
+            </>
           ) : (
             /* 未解锁：付费墙 */
-            <div className="compat-paywall compat-paywall-double">
-              <div className="paywall-badge paywall-badge-double">双人版</div>
+            <div className="compat-deep-preview compat-paywall compat-paywall-double">
+              <span className="compat-label">深度解读 · 预览</span>
+              <span className="compat-tag">{premiumGuide.preview.tag}</span>
+              <div className="compat-preview-body">
+                {premiumGuide.preview.poem && (
+                  <p className="compat-poem">{premiumGuide.preview.poem}</p>
+                )}
+                {premiumGuide.preview.poeticChemistry && (
+                  <p className="body-copy compat-poetic-chemistry">
+                    {premiumGuide.preview.poeticChemistry}
+                  </p>
+                )}
+              </div>
               <div className="paywall-blur-hint">
-                <p className="paywall-teaser">你们之间真正会发生什么？</p>
+                <p className="paywall-teaser">而真正让你们靠近或拉扯的，往往还在后面。</p>
                 <p className="paywall-desc">
-                  上面是方向性的相处建议，而深度版会告诉你们之间具体的默契与摩擦、各自的盲区，以及只属于你们两人的相处锦囊。
+                  上面只是这段关系的引子。深度版会继续展开你们之间具体的默契与摩擦、各自的盲区，以及只属于你们两人的相处锦囊。
                 </p>
               </div>
               <form className="paywall-form" onSubmit={handleCodeSubmit}>
