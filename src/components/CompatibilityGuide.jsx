@@ -517,11 +517,11 @@ function CompatibilityGuide({
                   {purchasePolling && <span className="btn-spinner" />}
                   {purchasePolling ? "等待支付确认…" : "解锁深度相处分析 · ¥2.99"}
                 </button>
-                {purchasePolling && (
-                  <p className="paywall-polling-hint">
-                    支付完成后将自动解锁，请勿关闭此页面
-                  </p>
-                )}
+                <p className="paywall-platform-hint">
+                  {purchasePolling
+                    ? "支付完成后此页面将自动解锁，请勿关闭"
+                    : "通过爱发电支付 · 支付后自动解锁 · 无需填写个人信息"}
+                </p>
               </div>
 
               {/* ===== 兑换码入口（折叠）===== */}

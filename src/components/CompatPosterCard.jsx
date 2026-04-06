@@ -67,13 +67,19 @@ const COMPACT_POEM_SET = new Set([
   "众里寻他千百度，蓦然回首，那人却在灯火阑珊处。"
 ]);
 
+const SINGLE_LINE_POEM_SET = new Set([
+  "庭院深深深几许，杨柳堆烟，帘幕无重数。"
+]);
+
 function getPoemTextStyle(poem) {
   const normalizedPoem = (poem || "").replace(/[“”]/g, "").trim();
+  const isSingleLine = SINGLE_LINE_POEM_SET.has(normalizedPoem);
+
   if (COMPACT_POEM_SET.has(normalizedPoem)) {
     return {
       fontSize: 29,
-      textAlign: "left",
-      maxWidth: 560
+      textAlign: isSingleLine ? "center" : "left",
+      maxWidth: isSingleLine ? 640 : 560
     };
   }
 
@@ -130,85 +136,92 @@ const headerStyle = {
 
 const brandStyle = {
   marginTop: 44,
-  padding: "8px 18px",
+  padding: "8px 20px",
   borderRadius: 999,
   background: "linear-gradient(135deg, #6f84b7 0%, #a89cc8 100%)",
   color: "#fff",
-  fontSize: 19,
+  fontSize: 20,
   fontWeight: 600,
-  letterSpacing: "0.06em"
+  letterSpacing: "0.08em"
 };
 
 const brandDividerStyle = {
-  marginTop: 16,
-  width: 40,
+  marginTop: 14,
+  width: 48,
   height: 2,
-  background: "rgba(111,132,183,0.3)",
+  background: "rgba(111,132,183,0.25)",
   borderRadius: 1
 };
 
 const contextStyle = {
-  marginTop: 18,
-  fontSize: 20,
-  color: "#8090b0",
-  letterSpacing: "0.08em",
-  fontWeight: 400
+  marginTop: 14,
+  fontSize: 21,
+  color: "#8a92b0",
+  letterSpacing: "0.12em",
+  fontWeight: 400,
+  textTransform: "uppercase"
+};
+
+const sloganStyle = {
+  marginTop: 24,
+  fontSize: 22,
+  color: "#6f84b7",
+  letterSpacing: "0.15em",
+  fontFamily: FONT_SERIF,
+  fontStyle: "italic",
+  opacity: 0.85
 };
 
 const titleStyle = {
-  marginTop: 14,
-  fontSize: 44,
+  marginTop: 12,
+  fontSize: 48,
   fontWeight: 700,
-  letterSpacing: "0.04em",
-  lineHeight: 1.24,
+  letterSpacing: "0.05em",
+  lineHeight: 1.2,
   color: "#2d3348",
   textAlign: "center"
 };
 
 const crossStyle = {
   display: "inline-block",
-  margin: "0 14px",
-  fontSize: 32,
-  fontWeight: 400,
-  color: "#a89cc8"
+  margin: "0 18px",
+  fontSize: 34,
+  fontWeight: 300,
+  color: "#a89cc8",
+  opacity: 0.7
 };
 
 const tagStyle = {
-  marginTop: 24,
-  padding: "10px 28px",
+  marginTop: 20,
+  padding: "10px 32px",
   borderRadius: 999,
-  background: "linear-gradient(135deg, rgba(190,204,236,0.45), rgba(199,188,219,0.45))",
-  fontSize: 23,
+  background: "linear-gradient(135deg, rgba(190,204,236,0.5), rgba(199,188,219,0.5))",
+  fontSize: 24,
   fontWeight: 600,
   color: "#4a5578",
-  letterSpacing: "0.04em"
+  letterSpacing: "0.06em",
+  boxShadow: "0 2px 8px rgba(111,132,183,0.12)"
 };
 
 const poemSectionStyle = {
   position: "relative",
-  marginTop: 32,
+  marginTop: 22,
   display: "flex",
   flexDirection: "column",
-  alignItems: "center"
-};
-
-const poemLineStyle = {
-  width: "50%",
-  height: 1,
-  background: "rgba(111,132,183,0.18)",
-  marginBottom: 24
+  alignItems: "center",
+  padding: "0 20px"
 };
 
 const poemTextBaseStyle = {
   color: "#4a5269",
   fontFamily: FONT_SERIF,
-  lineHeight: 1.82,
-  letterSpacing: "0.05em",
+  lineHeight: 1.85,
+  letterSpacing: "0.06em",
   whiteSpace: "pre-wrap"
 };
 
 const poemAuthorStyle = {
-  marginTop: 16,
+  marginTop: 12,
   color: "rgba(110, 118, 141, 0.95)",
   fontFamily: FONT_SERIF,
   fontSize: 18,
@@ -219,116 +232,168 @@ const poemAuthorStyle = {
 };
 
 const interpretationBlockStyle = {
-  marginTop: 52,
-  padding: "0 12px",
+  marginTop: 18,
+  padding: "0 40px",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 10,
-  minHeight: 80
+  gap: 10
 };
 
-const interpretationTextStyle = {
-  maxWidth: 590,
-  textAlign: "center",
-  fontSize: 18,
-  lineHeight: 1.6,
-  color: "#6e7798",
-  letterSpacing: "0.02em"
-};
+function getInterpTextStyle(text) {
+  const len = (text || "").length;
+  // 超过 22 个字就开始进入紧凑模式
+  let fontSize = 22;
+  let maxWidth = 560;
+  let letterSpacing = "0.05em";
 
-const chemistryInlineStyle = {
-  maxWidth: 540,
-  fontSize: 18,
-  lineHeight: 1.6,
-  color: "#6e7798",
-  letterSpacing: "0.02em",
-  margin: 0,
-  width: "100%",
-  textAlign: "center"
-};
+  if (len > 22) {
+    fontSize = 18;
+    maxWidth = 670;
+    letterSpacing = "0.02em";
+  }
+  if (len > 26) {
+    fontSize = 17;
+    maxWidth = 690;
+    letterSpacing = "0.01em";
+  }
+  if (len > 28) {
+    fontSize = 16.5;
+    maxWidth = 710;
+    letterSpacing = "0";
+  }
+
+  return {
+    maxWidth,
+    textAlign: "center",
+    fontSize,
+    lineHeight: 1.8,
+    color: "#3f4659",
+    letterSpacing,
+    fontFamily: FONT_SERIF,
+    fontWeight: 500,
+    whiteSpace: "pre-wrap"
+  };
+}
+
+function getChemTextStyle(text) {
+  const rawText = text || "";
+  const lines = rawText.split("\n");
+  const maxLineLen = Math.max(...lines.map(l => l.length));
+  // 如果手动换行了，按最长那行来判断是否需要缩小
+  const effectiveLen = lines.length > 1 ? maxLineLen + 5 : rawText.length;
+
+  let fontSize = 18;
+  let maxWidth = 500;
+  let letterSpacing = "0.03em";
+
+  if (effectiveLen > 24) {
+    fontSize = 17;
+    maxWidth = 670;
+    letterSpacing = "0.02em";
+  }
+  if (effectiveLen > 28) {
+    fontSize = 16.5;
+    maxWidth = 710;
+    letterSpacing = "0.01em";
+  }
+
+  return {
+    maxWidth,
+    fontSize,
+    lineHeight: 1.85,
+    color: "#8a92b0",
+    letterSpacing,
+    margin: 0,
+    width: "100%",
+    textAlign: "center",
+    fontStyle: "italic"
+  };
+}
 
 const chemistryTextMainStyle = {
-  display: "block"
+  display: "block",
+  whiteSpace: "pre-wrap"
 };
 
 const hintBoxStyle = {
-  marginTop: 56,
-  padding: "20px 32px",
-  borderRadius: 20,
-  background: "rgba(255,255,255,0.75)",
+  marginTop: 24,
+  padding: "24px 40px",
+  borderRadius: 24,
+  background: "rgba(255,255,255,0.65)",
+  border: "1px solid rgba(255,255,255,0.4)",
   textAlign: "center",
   width: "100%",
-  boxSizing: "border-box"
+  boxSizing: "border-box",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.02)"
 };
 
 const hintTitleStyle = {
-  fontSize: 18,
-  color: "#6c7ba3",
-  letterSpacing: "0.04em",
-  marginBottom: 8
+  fontSize: 19,
+  color: "#6f84b7",
+  letterSpacing: "0.06em",
+  fontWeight: 600,
+  marginBottom: 12
 };
 
 const hintItemStyle = {
-  fontSize: 16,
-  color: "#74819f",
-  lineHeight: 1.7
+  fontSize: 17,
+  color: "#7a829a",
+  lineHeight: 1.8,
+  letterSpacing: "0.02em"
 };
 
 const footerStyle = {
   marginTop: "auto",
-  marginBottom: 28,
+  marginBottom: 32,
   width: "100%",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 20
+  padding: "0 12px"
 };
 
 const footerLeadStyle = {
   flex: 1,
   minWidth: 0,
-  textAlign: "center"
+  textAlign: "left"
 };
 
 const footerQuestionStyle = {
-  fontSize: 17,
-  color: "#6f7ea5",
-  letterSpacing: "0.03em",
-  lineHeight: 1.7
+  fontSize: 19,
+  color: "#6f84b7",
+  letterSpacing: "0.04em",
+  lineHeight: 1.6,
+  fontWeight: 500
 };
 
 const footerBrandStyle = {
-  marginTop: 8,
-  fontSize: 15,
-  color: "#8f84b3",
-  letterSpacing: "0.04em",
-  fontWeight: 600
+  marginTop: 6,
+  fontSize: 16,
+  color: "#8a92b0",
+  letterSpacing: "0.06em",
+  fontWeight: 400
 };
 
 const qrBlockStyle = {
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  flexShrink: 0,
-  gap: 6
+  flexShrink: 0
 };
 
 const qrImgStyle = {
-  width: 88,
-  height: 88,
-  borderRadius: 6,
-  background: "rgba(255,255,255,0.75)",
-  padding: 4,
-  boxSizing: "content-box"
+  width: 104,
+  height: 104,
+  borderRadius: 12,
+  background: "#fff",
+  padding: 8,
+  boxSizing: "content-box",
+  boxShadow: "0 4px 15px rgba(111,132,183,0.15)"
 };
 
 const qrCaptionStyle = {
-  fontSize: 11,
-  color: "#7f8cab",
-  letterSpacing: "0.02em",
-  textAlign: "center",
-  whiteSpace: "nowrap"
+  display: "none"
 };
 
 const CompatPosterCard = forwardRef(function CompatPosterCard(
@@ -351,11 +416,29 @@ const CompatPosterCard = forwardRef(function CompatPosterCard(
   }, [siteUrl, myTypeKey]);
 
   const tagText = tag || "";
-  const { poem: poemText } = splitPoemAndAuthor(poem);
+  const { poem: rawPoem } = splitPoemAndAuthor(poem);
+  const poemText = (rawPoem || "").replace(/[“”‘’"']/g, "").trim();
   const poemTextStyle = {
     ...poemTextBaseStyle,
     ...getPoemTextStyle(poemText)
   };
+
+  const interpText = useMemo(() => {
+    const text = poeticChemistryShort || "";
+    if (text === "一座重重帘幕掩映的深院，等来了一位愿意耐心驻足的寻访者。") {
+      return "一座重重帘幕掩映的深院，\n等来了一位愿意耐心驻足的寻访者。";
+    }
+    // “轻盈的云影...” 保持原样即为一行，但在 interpretationTextStyle 中已确保宽容器
+    return text;
+  }, [poeticChemistryShort]);
+
+  const finalChemistry = useMemo(() => {
+    const text = chemistry || "";
+    if (text === "一个不愿被定义，一个不敢轻易交付真心——靠近从来不是没有代价的。") {
+      return "一个不愿被定义，一个不敢轻易交付真心。\n靠近从来不是没有代价的。";
+    }
+    return text;
+  }, [chemistry]);
 
   return (
     <div ref={ref} style={containerStyle}>
@@ -366,6 +449,7 @@ const CompatPosterCard = forwardRef(function CompatPosterCard(
         <div style={brandStyle}>「{seriesTag}」</div>
         <div style={brandDividerStyle} />
         <div style={contextStyle}>相处指南</div>
+        <div style={sloganStyle}>两种节奏，一种看见</div>
         <div style={titleStyle}>
           {myTitle}
           <span style={crossStyle}>×</span>
@@ -375,14 +459,13 @@ const CompatPosterCard = forwardRef(function CompatPosterCard(
       </div>
 
       <div style={poemSectionStyle}>
-        <div style={poemLineStyle} />
         {poemText ? <div style={poemTextStyle}>{poemText}</div> : null}
       </div>
 
       <div style={interpretationBlockStyle}>
-        <div style={interpretationTextStyle}>{poeticChemistryShort}</div>
-        <div style={chemistryInlineStyle}>
-          <span style={chemistryTextMainStyle}>{chemistry}</span>
+        <div style={getInterpTextStyle(interpText)}>{interpText}</div>
+        <div style={getChemTextStyle(finalChemistry)}>
+          <span style={chemistryTextMainStyle}>{finalChemistry}</span>
         </div>
       </div>
 
@@ -394,12 +477,11 @@ const CompatPosterCard = forwardRef(function CompatPosterCard(
 
       <div style={footerStyle}>
         <div style={footerLeadStyle}>
-          <div style={footerQuestionStyle}>扫码测测你们的相处默契</div>
-          <div style={footerBrandStyle}>—— {seriesTag}</div>
+          <div style={footerQuestionStyle}>扫描右侧二维码 解锁深层看见</div>
+          <div style={footerBrandStyle}>—— {seriesTag} 系列测试</div>
         </div>
         <div style={qrBlockStyle}>
           <img src={qrDataUri} style={qrImgStyle} alt="扫码进入相处指南" />
-          <span style={qrCaptionStyle}>扫码测测你们的相处默契</span>
         </div>
       </div>
     </div>
