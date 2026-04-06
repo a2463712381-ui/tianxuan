@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import CompatibilityGuide from "./CompatibilityGuide";
-import { isSingleUnlocked, isDoubleUnlocked, validateForTier, normalizeCode } from "../utils/unlock";
+import { isSingleUnlocked, isDoubleUnlocked, validateForTier, normalizeCode, startAfdianPurchase } from "../utils/unlock";
 import { trackUnlockSingle, trackUnlockFail } from "../utils/analytics";
 import { DIMENSION_MAX_SCORES } from "../data/scoring";
 import { resultContent } from "../data/results";
@@ -199,6 +199,9 @@ function ResultScreen({
   const [codeLoading, setCodeLoading] = useState(false);
   const [shareExpanded, setShareExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState(inviteFrom ? TAB_PAIR : TAB_SELF);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [purchasePolling, setPurchasePolling] = useState(false);
+  const [purchaseStopper, setPurchaseStopper] = useState(null);
 
   const shortTitle = extractShortTitle(result.title);
   const maxScore = Math.max(...Object.values(scores));
@@ -242,6 +245,24 @@ function ResultScreen({
     setCodeInput(normalizeCode(e.clipboardData.getData("text")));
     setCodeError("");
   }
+
+  function handlePurchase(tier) {
+    if (purchasePolling) return;
+    const stopper = startAfdianPurchase(tier, (status) => {
+      setPurchasePolling(status.polling);
+      if (status.found && status.level) {
+        setSingleOk(true);
+        if (status.level === "double") setDoubleOk(true);
+        trackUnlockSingle(resultKey);
+      }
+    });
+    setPurchaseStopper(stopper);
+  }
+
+  // 组件卸载时停止轮询
+  useEffect(() => {
+    return () => { if (purchaseStopper) purchaseStopper.stop(); };
+  }, [purchaseStopper]);
 
   return (
     <section className="screen screen-result fade-in">
@@ -383,28 +404,59 @@ function ResultScreen({
                         <span className="paywall-preview-tag">锦囊</span>
                       </div>
                     </div>
-                    <form className="paywall-form" onSubmit={handleCodeSubmit}>
-                      <input
-                        type="text"
-                        className={`paywall-input${codeError ? " paywall-input-error" : ""}`}
-                        placeholder="在此输入兑换码"
-                        value={codeInput}
-                        onChange={handleCodeChange}
-                        onPaste={handleCodePaste}
-                        autoComplete="off" autoCapitalize="characters"
-                        spellCheck="false" autoCorrect="off"
-                      />
-                      {codeError === "invalid" && <p className="paywall-error">这个兑换码似乎不对，请再检查一下</p>}
-                      {codeError === "used" && <p className="paywall-error">这个兑换码已经被使用过了</p>}
-                      {codeError === "expired" && <p className="paywall-error">这个兑换码已过期</p>}
-                      {codeError === "disabled" && <p className="paywall-error">这个兑换码已失效</p>}
-                      {codeError === "network" && <p className="paywall-error">网络连接异常，请稍后重试</p>}
-                      <button className="primary-button" type="submit"
-                        disabled={!codeInput.trim() || codeLoading}>
-                        {codeLoading && <span className="btn-spinner" />}
-                        {codeLoading ? "验证中…" : "解锁完整报告"}
+
+                    {/* ===== 购买按钮（主入口）===== */}
+                    <div className="paywall-purchase-section">
+                      <button
+                        className="primary-button paywall-buy-btn"
+                        type="button"
+                        onClick={() => handlePurchase("single")}
+                        disabled={purchasePolling}
+                      >
+                        {purchasePolling && <span className="btn-spinner" />}
+                        {purchasePolling ? "等待支付确认…" : "解锁完整报告 · ¥1.99"}
                       </button>
-                    </form>
+                      {purchasePolling && (
+                        <p className="paywall-polling-hint">
+                          支付完成后将自动解锁，请勿关闭此页面
+                        </p>
+                      )}
+                    </div>
+
+                    {/* ===== 兑换码入口（折叠）===== */}
+                    <div className="paywall-code-section">
+                      <button
+                        className="text-button paywall-code-toggle"
+                        type="button"
+                        onClick={() => setShowCodeInput(!showCodeInput)}
+                      >
+                        {showCodeInput ? "收起" : "已有兑换码？点此输入"}
+                      </button>
+                      {showCodeInput && (
+                        <form className="paywall-form fade-in" onSubmit={handleCodeSubmit}>
+                          <input
+                            type="text"
+                            className={`paywall-input${codeError ? " paywall-input-error" : ""}`}
+                            placeholder="在此输入兑换码"
+                            value={codeInput}
+                            onChange={handleCodeChange}
+                            onPaste={handleCodePaste}
+                            autoComplete="off" autoCapitalize="characters"
+                            spellCheck="false" autoCorrect="off"
+                          />
+                          {codeError === "invalid" && <p className="paywall-error">这个兑换码似乎不对，请再检查一下</p>}
+                          {codeError === "used" && <p className="paywall-error">这个兑换码已经被使用过了</p>}
+                          {codeError === "expired" && <p className="paywall-error">这个兑换码已过期</p>}
+                          {codeError === "disabled" && <p className="paywall-error">这个兑换码已失效</p>}
+                          {codeError === "network" && <p className="paywall-error">网络连接异常，请稍后重试</p>}
+                          <button className="secondary-button" type="submit"
+                            disabled={!codeInput.trim() || codeLoading}>
+                            {codeLoading && <span className="btn-spinner" />}
+                            {codeLoading ? "验证中…" : "兑换"}
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </div>
                 )}
               </section>

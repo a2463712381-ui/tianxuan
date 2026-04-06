@@ -7,7 +7,7 @@ import {
   trackUnlockDouble,
   trackUnlockFail,
 } from "../utils/analytics";
-import { isDoubleUnlocked, validateForTier, normalizeCode } from "../utils/unlock";
+import { isDoubleUnlocked, validateForTier, normalizeCode, startAfdianPurchase } from "../utils/unlock";
 
 /* ========== 渲染工具 ========== */
 const TYPE_TITLES = typeOptions.map((item) => item.title);
@@ -132,6 +132,9 @@ function CompatibilityGuide({
   const [codeInput, setCodeInput] = useState("");
   const [codeError, setCodeError] = useState("");  // "" | "invalid" | "used" | "expired" | "disabled" | "wrong_tier" | "network"
   const [codeLoading, setCodeLoading] = useState(false);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [purchasePolling, setPurchasePolling] = useState(false);
+  const [purchaseStopper, setPurchaseStopper] = useState(null);
   const guideRef = useRef(null);
   const paywallRef = useRef(null);
 
@@ -240,6 +243,28 @@ function CompatibilityGuide({
     setCodeInput(normalizeCode(pasted));
     setCodeError("");
   }
+
+  function handlePurchaseDouble() {
+    if (purchasePolling) return;
+    const stopper = startAfdianPurchase("double", (status) => {
+      setPurchasePolling(status.polling);
+      if (status.found && status.level) {
+        setUnlocked(true);
+        trackUnlockDouble(myTypeKey, selectedType?.key);
+        setTimeout(() => {
+          if (paywallRef.current) {
+            paywallRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }, 100);
+      }
+    });
+    setPurchaseStopper(stopper);
+  }
+
+  // 组件卸载时停止轮询
+  useEffect(() => {
+    return () => { if (purchaseStopper) purchaseStopper.stop(); };
+  }, [purchaseStopper]);
 
   // ========== 未选类型：选择界面 ==========
   if (!selectedType) {
@@ -481,42 +506,72 @@ function CompatibilityGuide({
                     上面只是这段关系的引子。深度版会继续展开你们之间具体的默契与摩擦、各自的盲区，以及只属于你们两人的相处锦囊。
                   </p>
               </div>
-              <form className="paywall-form" onSubmit={handleCodeSubmit}>
-                <input
-                  type="text"
-                  className={`paywall-input${codeError ? " paywall-input-error" : ""}`}
-                  placeholder="在此输入双人版兑换码"
-                  value={codeInput}
-                  onChange={handleCodeChange}
-                  onPaste={handleCodePaste}
-                  autoComplete="off"
-                  autoCapitalize="characters"
-                  spellCheck="false"
-                  autoCorrect="off"
-                />
-                {codeError === "wrong_tier" && (
-                  <p className="paywall-error">这是个人版兑换码，双人版需要单独的兑换码</p>
-                )}
-                {codeError === "invalid" && (
-                  <p className="paywall-error">这个兑换码似乎不对，请再检查一下</p>
-                )}
-                {codeError === "used" && (
-                  <p className="paywall-error">这个兑换码已经被使用过了</p>
-                )}
-                {codeError === "expired" && (
-                  <p className="paywall-error">这个兑换码已过期</p>
-                )}
-                {codeError === "disabled" && (
-                  <p className="paywall-error">这个兑换码已失效</p>
-                )}
-                {codeError === "network" && (
-                  <p className="paywall-error">网络连接异常，请稍后重试</p>
-                )}
-                <button className="primary-button" type="submit" disabled={!codeInput.trim() || codeLoading}>
-                  {codeLoading && <span className="btn-spinner" />}
-                  {codeLoading ? "验证中…" : "解锁深度相处分析"}
+              {/* ===== 购买按钮（主入口）===== */}
+              <div className="paywall-purchase-section">
+                <button
+                  className="primary-button paywall-buy-btn"
+                  type="button"
+                  onClick={handlePurchaseDouble}
+                  disabled={purchasePolling}
+                >
+                  {purchasePolling && <span className="btn-spinner" />}
+                  {purchasePolling ? "等待支付确认…" : "解锁深度相处分析 · ¥2.99"}
                 </button>
-              </form>
+                {purchasePolling && (
+                  <p className="paywall-polling-hint">
+                    支付完成后将自动解锁，请勿关闭此页面
+                  </p>
+                )}
+              </div>
+
+              {/* ===== 兑换码入口（折叠）===== */}
+              <div className="paywall-code-section">
+                <button
+                  className="text-button paywall-code-toggle"
+                  type="button"
+                  onClick={() => setShowCodeInput(!showCodeInput)}
+                >
+                  {showCodeInput ? "收起" : "已有兑换码？点此输入"}
+                </button>
+                {showCodeInput && (
+                  <form className="paywall-form fade-in" onSubmit={handleCodeSubmit}>
+                    <input
+                      type="text"
+                      className={`paywall-input${codeError ? " paywall-input-error" : ""}`}
+                      placeholder="在此输入双人版兑换码"
+                      value={codeInput}
+                      onChange={handleCodeChange}
+                      onPaste={handleCodePaste}
+                      autoComplete="off"
+                      autoCapitalize="characters"
+                      spellCheck="false"
+                      autoCorrect="off"
+                    />
+                    {codeError === "wrong_tier" && (
+                      <p className="paywall-error">这是个人版兑换码，双人版需要单独的兑换码</p>
+                    )}
+                    {codeError === "invalid" && (
+                      <p className="paywall-error">这个兑换码似乎不对，请再检查一下</p>
+                    )}
+                    {codeError === "used" && (
+                      <p className="paywall-error">这个兑换码已经被使用过了</p>
+                    )}
+                    {codeError === "expired" && (
+                      <p className="paywall-error">这个兑换码已过期</p>
+                    )}
+                    {codeError === "disabled" && (
+                      <p className="paywall-error">这个兑换码已失效</p>
+                    )}
+                    {codeError === "network" && (
+                      <p className="paywall-error">网络连接异常，请稍后重试</p>
+                    )}
+                    <button className="secondary-button" type="submit" disabled={!codeInput.trim() || codeLoading}>
+                      {codeLoading && <span className="btn-spinner" />}
+                      {codeLoading ? "验证中…" : "兑换"}
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
           )}
         </div>

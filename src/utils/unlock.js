@@ -140,6 +140,78 @@ export async function validateForTier(input, expectedTier) {
   }
 }
 
+/* ========== 爱发电支付轮询 ========== */
+
+/** 爱发电商品页 URL */
+const AFDIAN_URLS = {
+  single: "https://afdian.com/item/930c9f5e317511f1a81052540025c377",
+  double: "https://afdian.com/item/b924250e317511f1a4505254001e7c00",
+};
+
+/**
+ * 打开爱发电支付页并开始轮询等待解锁。
+ *
+ * @param {"single"|"double"} tier — 购买的层级
+ * @param {(status: {polling: boolean, found: boolean, level: string|false}) => void} onUpdate — 状态回调
+ * @returns {{ stop: () => void }} — 调用 stop() 停止轮询
+ */
+export function startAfdianPurchase(tier, onUpdate) {
+  const deviceId = getDeviceId();
+  const since = Math.floor(Date.now() / 1000); // 秒级时间戳
+  let stopped = false;
+  let timerId = null;
+
+  // 打开爱发电支付页
+  const url = AFDIAN_URLS[tier] || AFDIAN_URLS.single;
+  window.open(url, "_blank");
+
+  onUpdate({ polling: true, found: false, level: false });
+
+  // 轮询函数
+  async function poll() {
+    if (stopped) return;
+
+    try {
+      const res = await fetch(
+        `/api/afdian-check?deviceId=${encodeURIComponent(deviceId)}&tier=${tier}&since=${since}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.found && data.level) {
+          // 解锁成功！
+          cacheUnlock(data.level);
+          stopped = true;
+          onUpdate({ polling: false, found: true, level: data.level });
+          return;
+        }
+      }
+    } catch {
+      // 网络错误，继续轮询
+    }
+
+    if (!stopped) {
+      // 5 分钟后自动停止轮询
+      if (Date.now() / 1000 - since > 300) {
+        stopped = true;
+        onUpdate({ polling: false, found: false, level: false });
+        return;
+      }
+      timerId = setTimeout(poll, 3000); // 每 3 秒轮询一次
+    }
+  }
+
+  // 启动轮询
+  timerId = setTimeout(poll, 3000);
+
+  return {
+    stop() {
+      stopped = true;
+      if (timerId) clearTimeout(timerId);
+      onUpdate({ polling: false, found: false, level: false });
+    },
+  };
+}
+
 /**
  * 从服务端同步解锁状态到本地缓存。
  * 应在页面初始化时调用一次。
