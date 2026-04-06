@@ -50,6 +50,34 @@ function getPoeticPreviewExcerpt(text) {
   return `${text.slice(0, 28)}……`;
 }
 
+function splitPoemAndAuthor(text) {
+  if (!text) {
+    return { poem: "", author: "" };
+  }
+
+  const parts = text.split(/\s*——\s*/);
+  if (parts.length < 2) {
+    return { poem: text, author: "" };
+  }
+
+  return {
+    poem: parts[0].trim(),
+    author: parts.slice(1).join(" —— ").trim()
+  };
+}
+
+const COMPACT_POEM_SET = new Set([
+  "庭院深深深几许，杨柳堆烟，帘幕无重数。",
+  "众里寻他千百度，蓦然回首，那人却在灯火阑珊处。"
+]);
+
+function getPoemClassName(poem) {
+  const normalizedPoem = (poem || "").replace(/[“”]/g, "").trim();
+  return COMPACT_POEM_SET.has(normalizedPoem)
+    ? "compat-poem compat-poem-compact"
+    : "compat-poem";
+}
+
 function splitAdviceLead(text) {
   const matchedTitle = typeOptions.find((item) => text.startsWith(item.title));
   if (!matchedTitle) {
@@ -110,6 +138,7 @@ function CompatibilityGuide({
   const guide = selectedType ? getCompatibility(myTypeKey, selectedType.key) : null;
   const premiumGuide = selectedType ? getPremiumCompatibility(myTypeKey, selectedType.key) : null;
   const adviceEntries = guide ? buildAdviceEntries(guide.advice, myTypeKey, selectedType.key) : [];
+  const poeticPreview = premiumGuide ? splitPoemAndAuthor(premiumGuide.preview.poem) : { poem: "", author: "" };
 
   // 如果有 ?from= 参数，自动选中对方类型
   useEffect(() => {
@@ -163,6 +192,8 @@ function CompatibilityGuide({
       myTitle: myTypeTitle,
       theirTitle: selectedType.title,
       tag: premiumGuide.preview.tag,
+      poem: premiumGuide.preview.poem,
+      poeticChemistryShort: premiumGuide.preview.poeticChemistryShort || "",
       chemistry: premiumGuide.preview.chemistry,
       myTypeKey: myTypeKey,
       theirTypeKey: selectedType.key
@@ -333,11 +364,15 @@ function CompatibilityGuide({
           {/* 已解锁 */}
           {unlocked ? (
             <>
-              <div className="compat-deep-preview">
-                <span className="compat-label">深度解读 · 预览</span>
-                <span className="compat-tag">{premiumGuide.preview.tag}</span>
-                {premiumGuide.preview.poem && (
-                  <p className="compat-poem">{premiumGuide.preview.poem}</p>
+                <div className="compat-deep-preview">
+                  <span className="compat-label">深度解读 · 预览</span>
+                  <span className="compat-tag">{premiumGuide.preview.tag}</span>
+                  {poeticPreview.poem && <p className={getPoemClassName(poeticPreview.poem)}>{poeticPreview.poem}</p>}
+                  {poeticPreview.author && <p className="compat-poem-author">—— {poeticPreview.author}</p>}
+                  {premiumGuide.preview.poeticChemistry && (
+                    <p className="body-copy compat-poetic-chemistry">
+                      {renderHighlightedText(premiumGuide.preview.poeticChemistry)}
+                  </p>
                 )}
               </div>
 
@@ -425,24 +460,26 @@ function CompatibilityGuide({
             </>
           ) : (
             /* 未解锁：付费墙 */
-            <div className="compat-deep-preview compat-paywall compat-paywall-double">
-              <span className="compat-label">深度解读 · 预览</span>
-              <span className="compat-tag">{premiumGuide.preview.tag}</span>
-              <div className="compat-preview-body">
-                {premiumGuide.preview.poem && (
-                  <p className="compat-poem">{premiumGuide.preview.poem}</p>
-                )}
-                {premiumGuide.preview.poeticChemistry && (
-                  <p className="body-copy compat-poetic-chemistry">
-                    {premiumGuide.preview.poeticChemistry}
+              <div className="compat-deep-preview compat-paywall compat-paywall-double">
+                <span className="compat-label">深度解读 · 预览</span>
+                <span className="compat-tag">{premiumGuide.preview.tag}</span>
+                <div className="compat-preview-body">
+                  {poeticPreview.poem && <p className={getPoemClassName(poeticPreview.poem)}>{poeticPreview.poem}</p>}
+                  {poeticPreview.author && <p className="compat-poem-author">—— {poeticPreview.author}</p>}
+                  {premiumGuide.preview.poeticChemistry && (
+                    <p className="body-copy compat-poetic-chemistry">
+                      {premiumGuide.preview.poeticChemistry}
                   </p>
                 )}
-              </div>
-              <div className="paywall-blur-hint">
-                <p className="paywall-teaser">而真正让你们靠近或拉扯的，往往还在后面。</p>
-                <p className="paywall-desc">
-                  上面只是这段关系的引子。深度版会继续展开你们之间具体的默契与摩擦、各自的盲区，以及只属于你们两人的相处锦囊。
-                </p>
+                </div>
+                <div className="paywall-blur-hint">
+                  <p className="paywall-teaser">
+                    而真正让你们靠近或拉扯的，<br />
+                    往往还在后面。
+                  </p>
+                  <p className="paywall-desc">
+                    上面只是这段关系的引子。深度版会继续展开你们之间具体的默契与摩擦、各自的盲区，以及只属于你们两人的相处锦囊。
+                  </p>
               </div>
               <form className="paywall-form" onSubmit={handleCodeSubmit}>
                 <input
@@ -488,8 +525,9 @@ function CompatibilityGuide({
       {/* ===== 行动区 ===== */}
       <div className="compat-action-zone">
         <span className="compat-action-kicker">如果想看得更准一些</span>
-        <p className="body-copy centered compat-action-title">
-          让 TA 也来测一测，你们的相处版会更贴近真实
+        <p className="body-copy compat-action-title">
+          让 TA 也来测一测，<br />
+          你们的相处版会更贴近真实
         </p>
         <button
           className="primary-button"

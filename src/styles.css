@@ -1389,6 +1389,22 @@ button { font: inherit; }
   font-size: 0.95rem;
   line-height: 1.82;
   letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.compat-poem-compact {
+  font-size: calc(0.95rem - 1px);
+  text-align: left;
+}
+
+.compat-poem-author {
+  margin: -2px 0 0;
+  color: rgba(110, 118, 141, 0.86);
+  font-family: "Noto Serif SC", "Songti SC", "STSong", serif;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  text-align: right;
+  padding-right: 24px;
 }
 
 .compat-poetic-chemistry {
@@ -1396,6 +1412,8 @@ button { font: inherit; }
   font-size: var(--text-base);
   line-height: 1.92;
   font-weight: 500;
+  text-align: left;
+  text-indent: 2em;
 }
 
 .compat-preview-body {
@@ -1531,7 +1549,7 @@ button { font: inherit; }
   color: rgba(109, 118, 143, 0.92);
   line-height: 1.82;
   margin: 0;
-  text-align: center;
+  text-align: left;
 }
 
 .paywall-form {
@@ -2350,12 +2368,14 @@ button { font: inherit; }
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.1em;
+  align-self: flex-start;
 }
 
 .compat-action-title {
   color: var(--text-heading);
   font-weight: 600;
   line-height: 1.9;
+  text-align: center;
 }
 
 .compat-action-zone .primary-button,

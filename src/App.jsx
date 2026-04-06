@@ -424,7 +424,7 @@ function App() {
   }
 
   async function handleGenerateCompatPoster(data) {
-    // data: { myTitle, theirTitle, tag, chemistry, myTypeKey, theirTypeKey }
+    // data: { myTitle, theirTitle, tag, poem, poeticChemistryShort, chemistry, myTypeKey, theirTypeKey }
     setCompatPosterData(data);
     setCompatPosterLoading(true);
 
@@ -551,6 +551,8 @@ function App() {
             myTitle={compatPosterData.myTitle}
             theirTitle={compatPosterData.theirTitle}
             tag={compatPosterData.tag}
+            poem={compatPosterData.poem}
+            poeticChemistryShort={compatPosterData.poeticChemistryShort}
             chemistry={compatPosterData.chemistry}
             myTypeKey={compatPosterData.myTypeKey}
             siteUrl={SITE_URL}
